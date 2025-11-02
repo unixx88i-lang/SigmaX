@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet"/>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #030712;
+            background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 2rem 2rem;
+        }
+        .btn {
+            @apply py-2 px-4 rounded-lg text-sm font-semibold transition-transform transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed;
+        }
+        .btn-indigo { @apply bg-indigo-600 text-white hover:bg-indigo-700; }
+        .btn-green { @apply bg-green-600 text-white hover:bg-green-700; }
+        .btn-red { @apply bg-red-600 text-white hover:bg-red-700; }
+        .btn-gray { @apply bg-gray-600 text-white hover:bg-gray-500; }
+    </style>
+</head>
+<body class="text-gray-200">
+    <div class="p-4 md:p-8 max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-8">
+            <div class="flex items-center gap-3">
+                <svg class="h-8 w-8 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none"
+                     viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-1.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25A2.25 2.25 0 015.25 3h13.5A2.25 2.25 0 0121 5.25zm-6-2.25h.008v.008H15V3z"/>
+                </svg>
+                <h1 id="company-name-header" class="text-2xl font-bold text-white">Dashboard</h1>
+            </div>
+            <a href="/api/logout"
+               class="bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600 transition">
+                Logout
+            </a>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left: Create Job -->
+            <div class="lg:col-span-1">
+                <div class="bg-gray-900/60 border border-gray-700 p-6 rounded-2xl shadow-xl sticky top-8">
+                    <h2 class="text-xl font-bold mb-4 text-white">Create New Job Posting</h2>
+                    <form id="create-job-form" class="space-y-4">
+                        <input type="text" id="job-title" placeholder="Job Title" required
+                               class="w-full bg-gray-800 border border-gray-600 rounded-md p-3 focus:ring-2 focus:ring-indigo-500"/>
+                        <!-- Quick Templates -->
+                        <div class="space-y-2">
+                             <label class="block text-sm font-medium text-gray-400">Quick-Start Templates</label>
+                             <div class="flex flex-wrap gap-2">
+                                 <button type="button" class="jd-template-btn bg-gray-700 text-gray-300 text-xs font-semibold py-1 px-3 rounded-full hover:bg-indigo-500" data-role="frontend">Frontend</button>
+                                 <button type="button" class="jd-template-btn bg-gray-700 text-gray-300 text-xs font-semibold py-1 px-3 rounded-full hover:bg-indigo-500" data-role="backend">Backend</button>
+                                 <button type="button" class="jd-template-btn bg-gray-700 text-gray-300 text-xs font-semibold py-1 px-3 rounded-full hover:bg-indigo-500" data-role="devops">DevOps</button>
+                                 <button type="button" class="jd-template-btn bg-gray-700 text-gray-300 text-xs font-semibold py-1 px-3 rounded-full hover:bg-indigo-500" data-role="data-scientist">Data Scientist</button>
+                             </div>
+                        </div>
+                        <textarea id="job-description" placeholder="Or paste job description here..." required rows="6"
+                                  class="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500"></textarea>
+                        <!-- Upload -->
+                        <label class="text-sm text-gray-400 flex items-center justify-center gap-2 cursor-pointer border-2 border-dashed border-gray-600 p-4 rounded-lg hover:border-indigo-500 transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>
+                            Upload JD (PDF/DOCX)
+                            <input type="file" id="jd-file-input" class="hidden" accept=".pdf,.docx"/>
+                        </label>
+                        <button type="submit" class="w-full btn btn-indigo">Create Job & Get Link</button>
+                    </form>
+
+                    <!-- Interview Link -->
+                    <div id="interview-link-container"
+                         class="mt-4 hidden opacity-0 transition-opacity duration-300">
+                        <p class="text-green-400 font-semibold">Share this link with candidates:</p>
+                        <div class="relative">
+                            <input id="interview-link-input" type="text" readonly
+                                   class="w-full bg-gray-800 p-2 rounded-md border border-gray-600 mt-2 pr-10"/>
+                            <button id="copy-link-btn"
+                                    class="absolute inset-y-0 right-0 px-3 text-gray-400 hover:text-white"
+                                    title="Copy to clipboard">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5"
+                                     fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Jobs -->
+            <div class="lg:col-span-2">
+                <h2 class="text-xl font-bold mb-4 text-white">Active Job Postings</h2>
+                <div id="jobs-container" class="space-y-6">
+                    <p class="text-gray-400">Loading jobs...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const session = await (await fetch('/api/check_session')).json();
+                if (!session.logged_in || session.user_type !== 'admin') { window.location.href = '/'; return; }
+                document.getElementById('company-name-header').textContent = `${session.company_name} Dashboard`;
+            } catch (e) { window.location.href = '/'; return; }
+
+            const createJobForm = document.getElementById('create-job-form');
+            const jobsContainer = document.getElementById('jobs-container');
+            const linkContainer = document.getElementById('interview-link-container');
+            const linkInput = document.getElementById('interview-link-input');
+            const copyBtn = document.getElementById('copy-link-btn');
+            const jdFileInput = document.getElementById('jd-file-input');
+            const jobDescriptionEl = document.getElementById('job-description');
+            const jobTitleEl = document.getElementById('job-title');
+            const jdTemplateButtons = document.querySelectorAll('.jd-template-btn');
+
+            const jobTemplates = {
+                'frontend': { title: 'Frontend Developer', desc: 'Seeking a skilled Frontend Developer with experience in HTML, CSS, JavaScript, and modern frameworks like React or Vue.js.' },
+                'backend': { title: 'Backend Developer', desc: 'Looking for a Backend Developer proficient in Python, Node.js, or Java, with database and API experience.' },
+                'devops': { title: 'DevOps Engineer', desc: 'Hiring a DevOps Engineer to manage CI/CD pipelines, automate deployments, and maintain cloud infrastructure.' },
+                'data-scientist': { title: 'Data Scientist', desc: 'Seeking a Data Scientist with experience in ML, data analysis, and visualization using Python libraries.' }
+            };
+
+            jdTemplateButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const role = button.dataset.role;
+                    jobTitleEl.value = jobTemplates[role].title;
+                    jobDescriptionEl.value = jobTemplates[role].desc;
+                    jdTemplateButtons.forEach(btn => btn.classList.remove('bg-indigo-500', 'text-white'));
+                    button.classList.add('bg-indigo-500', 'text-white');
+                });
+            });
+
+            async function apiCall(endpoint, options = {}) {
+                const button = options.button;
+                if (button) {
+                    button.disabled = true;
+                    button.innerHTML = '<span class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mx-auto"></span>';
+                }
+                try {
+                    const response = await fetch(endpoint, options);
+                    const contentType = response.headers.get("content-type");
+                    if (contentType && contentType.includes("application/json")) {
+                        const data = await response.json();
+                        if (!response.ok) throw new Error(data.error || 'API error');
+                        return data;
+                    } else {
+                        if (!response.ok) throw new Error('Authentication error or server issue.');
+                        return response;
+                    }
+                } catch (error) {
+                    alert(`Error: ${error.message}`);
+                    throw error;
+                } finally {
+                    if (button) {
+                        button.disabled = false;
+                        button.innerHTML = options.originalText;
+                    }
+                }
+            }
+
+            function renderCandidate(app) {
+                const statusColors = {
+                    'Applied': 'text-gray-400', 'Shortlisted': 'text-yellow-400',
+                    'Invited': 'text-blue-400', 'Completed': 'text-purple-400',
+                    'Accepted': 'text-green-400', 'Rejected': 'text-red-400'
+                };
+                
+                let actionButtons = '';
+                if (app.status === 'Shortlisted') {
+                    actionButtons = `<button class="btn btn-green" data-action="invite" data-id="${app.id}">Send Invite</button>`;
+                } else if (app.status === 'Completed') {
+                    actionButtons = `
+                        <a href="/api/download_report/${app.id}" class="btn btn-indigo">Report</a>
+                        <button class="btn btn-green" data-action="accept" data-id="${app.id}">Accept</button>
+                        <button class="btn btn-red" data-action="reject" data-id="${app.id}">Reject</button>
+                    `;
+                }
+
+                return `
+                    <div class="flex justify-between items-center text-sm p-3 bg-gray-700/50 rounded-md">
+                        <div>
+                            <p class="font-semibold text-white">${app.name}</p>
+                            <p class="text-xs text-gray-400">${app.email}</p>
+                        </div>
+                        <div class="flex items-center gap-2 flex-shrink-0">
+                            <span class="font-bold text-xs ${statusColors[app.status] || 'text-gray-400'}">${app.status}</span>
+                            ${actionButtons}
+                        </div>
+                    </div>`;
+            }
+
+            async function loadDashboard() {
+                try {
+                    const data = await apiCall('/api/admin/jobs');
+                    jobsContainer.innerHTML = '';
+                    if (data.length === 0) { jobsContainer.innerHTML = '<div class="bg-gray-800 p-6 rounded-lg text-center text-gray-400">No jobs posted yet.</div>'; return; }
+                    
+                    data.forEach(job => {
+                        const newApps = job.applications.filter(a => a.status === 'Applied');
+                        const shortlistedApps = job.applications.filter(a => a.status === 'Shortlisted' || a.status === 'Invited');
+                        const completedApps = job.applications.filter(a => ['Completed', 'Accepted', 'Rejected'].includes(a.status));
+
+                        const jobElement = document.createElement('div');
+                        jobElement.className = "bg-gray-900/60 border border-gray-700 p-6 rounded-lg shadow-md";
+                        jobElement.innerHTML = `
+                            <div class="flex justify-between items-start mb-4">
+                                <h3 class="font-bold text-lg text-white">${job.title}</h3>
+                                <button class="btn btn-indigo" data-action="shortlist" data-id="${job.id}">AI Shortlist ${newApps.length > 0 ? `(${newApps.length})` : ''}</button>
+                            </div>
+                            
+                            <div class="space-y-4">
+                                <div>
+                                    <h4 class="text-sm font-semibold text-white border-b border-gray-700 pb-2 mb-2">Shortlisted & Invited</h4>
+                                    <div class="space-y-2">${shortlistedApps.length > 0 ? shortlistedApps.map(renderCandidate).join('') : '<p class="text-xs text-gray-500">No candidates shortlisted yet.</p>'}</div>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-semibold text-white border-b border-gray-700 pb-2 mb-2">Interview Completed / Final Decision</h4>
+                                    <div class="space-y-2">${completedApps.length > 0 ? completedApps.map(renderCandidate).join('') : '<p class="text-xs text-gray-500">No candidates have completed the interview.</p>'}</div>
+                                </div>
+                            </div>
+                        `;
+                        jobsContainer.appendChild(jobElement);
+                    });
+                } catch (error) { if (error.message.includes("Authentication error")) window.location.href = '/'; }
+            }
+
+            jobsContainer.addEventListener('click', async (e) => {
+                const button = e.target.closest('button');
+                if (!button) return;
+                const { action, id } = button.dataset;
+                if (!action || !id) return;
+                const originalText = button.innerHTML; 
+                try {
+                    let data;
+                    if (action === 'shortlist') {
+                        data = await apiCall(`/api/admin/shortlist/${id}`, { method: 'POST', button, originalText });
+                    } else if (action === 'invite') {
+                        data = await apiCall(`/api/admin/send_invite/${id}`, { method: 'POST', button, originalText });
+                    } else if (['accept', 'reject'].includes(action)) {
+                        // **** THIS IS THE CORRECTED LOGIC ****
+                        const status = action === 'accept' ? 'Accepted' : 'Rejected';
+                        data = await apiCall(`/api/admin/update_status/${id}`, {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ status: status }), 
+                            button, originalText
+                        });
+                    }
+                    if (data) alert(data.message);
+                    loadDashboard();
+                } catch {}
+            });
+
+            copyBtn.addEventListener('click', () => { 
+                navigator.clipboard.writeText(linkInput.value);
+                const originalHTML = copyBtn.innerHTML;
+                copyBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>';
+                setTimeout(() => (copyBtn.innerHTML = originalHTML), 2000);
+            });
+
+            jdFileInput.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const formData = new FormData();
+                formData.append('file', file);
+                try {
+                    const data = await apiCall('/api/extract_text', { method: 'POST', body: formData });
+                    jobDescriptionEl.value = data.text;
+                } catch {}
+            });
+
+            createJobForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                try {
+                    const data = await apiCall('/api/admin/create_job', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ title: jobTitleEl.value, description: jobDescriptionEl.value }),
+                        button: e.target.querySelector('button[type="submit"]'), originalText: 'Create Job & Get Link'
+                    });
+                    linkInput.value = data.interview_link;
+                    linkContainer.classList.remove('hidden');
+                    setTimeout(() => linkContainer.style.opacity = 1, 50);
+                    createJobForm.reset();
+                    jdTemplateButtons.forEach(btn => btn.classList.remove('bg-indigo-500', 'text-white'));
+                    loadDashboard();
+                } catch {}
+            });
+
+            loadDashboard();
+        });
+    </script>
+</body>
+</html>
+

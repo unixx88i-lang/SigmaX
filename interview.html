@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Interview for {{ job_title }}</title>
+
+    <!-- MediaPipe Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+
+    <!-- Tailwind & Fonts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #030712;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 2rem 2rem;
+        }
+        .hidden { display: none !important; }
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .pulse { animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+
+        .video-container {
+            position: relative;
+            background-color: #1F2937;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+        }
+        .video-container video, .video-container canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+        .proctor-overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            background-color: rgba(220, 38, 38, 0.6);
+            color: white; font-size: 1.5rem; font-weight: bold; text-transform: uppercase;
+            letter-spacing: 0.05em; opacity: 0; pointer-events: none;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .proctor-overlay.warn-1 { background-color: rgba(245, 158, 11, 0.85); } /* amber gentle */
+        .proctor-overlay.warn-2 { background-color: rgba(249, 115, 22, 0.9); }  /* orange stronger */
+        .proctor-overlay.terminated { background-color: rgba(220, 38, 38, 0.95); } /* red */
+        .proctor-overlay.visible { opacity: 1; }
+
+        textarea:focus { outline: none; }
+    </style>
+</head>
+<body class="text-gray-200" data-application-id="{{ application_id }}">
+
+<div id="app-root" class="w-full min-h-screen flex flex-col">
+
+    <!-- ===== Candidate Setup View (Removed resume upload) ===== -->
+    <section id="candidate-setup-view" class="flex flex-col items-center justify-center min-h-screen p-4 fade-in">
+        <div class="bg-gray-800 rounded-2xl shadow-xl p-8 w-full max-w-lg space-y-6 text-center">
+            <h2 class="text-3xl font-bold text-white">Interview for {{ job_title }}</h2>
+            <p class="text-gray-400">This is an AI-proctored interview. Please allow camera and microphone access. Ensure you are alone and in a well-lit room.</p>
+            <p id="setup-status" class="text-yellow-400 h-5"></p>
+            <div class="flex flex-col gap-3">
+                <button id="start-interview-btn"
+                        class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 disabled:bg-gray-500 disabled:cursor-not-allowed transition">
+                    Begin Setup & Start Interview
+                </button>
+                <div id="camera-error-banner" class="hidden bg-red-700 text-white p-3 rounded">
+                    <div id="camera-error-text">Camera permission is required. Please allow camera/microphone access.</div>
+                    <div class="mt-2 flex gap-2 justify-center">
+                        <button id="retry-camera-btn" class="bg-yellow-400 text-black font-semibold px-3 py-1 rounded">Retry Camera</button>
+                        <button id="help-camera-btn" class="bg-gray-700 text-white px-3 py-1 rounded">How to enable</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== Interview View ===== -->
+    <section id="interview-view" class="hidden w-full flex-grow flex flex-col p-4">
+        <header class="flex justify-between items-center pb-4">
+            <h1 class="text-xl font-bold text-white">AI Virtual Interview</h1>
+            <div class="flex items-center gap-2">
+                <span id="proctor-status-indicator" class="h-3 w-3 rounded-full bg-gray-500"></span>
+                <span id="proctor-status-text" class="text-sm font-medium">Proctoring Offline</span>
+            </div>
+        </header>
+
+        <main class="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- AI Interviewer Panel -->
+            <div class="video-container rounded-lg flex flex-col justify-between p-6 bg-gray-900">
+                <h2 class="text-2xl font-bold text-white text-center">AI Interviewer</h2>
+                <p id="question-text" class="text-2xl font-medium text-gray-100 text-center mt-4"></p>
+                <div id="ai-status" class="bg-indigo-500 text-white rounded-full px-4 py-1 inline-flex items-center gap-2 self-center mt-4">
+                    <span id="ai-status-icon" class="w-3 h-3 bg-white rounded-full"></span>
+                    <span id="ai-status-text">Initializing...</span>
+                </div>
+            </div>
+
+            <!-- Candidate Panel -->
+            <div class="flex flex-col gap-4">
+                <div class="video-container rounded-lg flex-grow relative">
+                    <video id="input_video" class="hidden" autoplay muted playsinline></video>
+                    <canvas id="output_canvas"></canvas>
+                    <div id="proctor-warning-overlay" class="proctor-overlay rounded-lg"><span id="proctor-warning-text"></span></div>
+                    <div id="timer-display" class="absolute top-4 right-4 bg-black bg-opacity-50 px-3 py-1 rounded-full text-sm font-bold text-white">02:00</div>
+                    <div class="absolute bottom-4 right-4 bg-black bg-opacity-50 px-3 py-1 rounded-full text-sm text-white">Candidate</div>
+                </div>
+                <textarea id="answer-textarea" class="w-full h-28 p-3 bg-gray-900 border border-gray-700 rounded-lg text-gray-300 resize-none"
+                          placeholder="Your transcribed answer..." readonly></textarea>
+            </div>
+        </main>
+
+        <footer class="flex justify-center items-center gap-4 pt-4 h-20">
+            <button id="record-btn" class="bg-indigo-600 text-white font-semibold py-3 px-6 rounded-lg">Start Answering</button>
+            <button id="next-btn" class="bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg hidden">Next Question</button>
+        </footer>
+    </section>
+
+    <!-- ===== End View ===== -->
+    <section id="end-view" class="hidden flex flex-col items-center justify-center min-h-screen p-4 fade-in">
+        <div class="bg-gray-800 rounded-2xl shadow-xl p-12 text-center space-y-4 max-w-lg">
+            <h2 class="text-3xl font-bold text-white">Interview Submitted</h2>
+            <p class="text-gray-400">Thank you for completing the interview. Your results have been sent to the hiring manager.</p>
+            <p class="text-lg text-gray-200">You may now close this window.</p>
+        </div>
+    </section>
+
+</div>
+    <script type="module">
+    const APPLICATION_ID = document.body.dataset.applicationId;
+        
+        // --- State Management ---
+        const appState = {
+            questions: [], interviewResults: [], proctoringFlags: [], currentQuestionIndex: 0,
+            isRecording: false, answerTimerInterval: null, accumulatedTranscript: ""
+        };
+        const proctoringState = { faceMesh: null, camera: null, focusTimeout: null, multiFaceTimeout: null };
+
+        // --- DOM Elements ---
+        const setupView = document.getElementById('candidate-setup-view');
+        const interviewView = document.getElementById('interview-view');
+        const endView = document.getElementById('end-view');
+        const startBtn = document.getElementById('start-interview-btn');
+        const recordBtn = document.getElementById('record-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const videoElement = document.getElementById('input_video');
+        const canvasElement = document.getElementById('output_canvas');
+        const canvasCtx = canvasElement.getContext('2d');
+        const aiStatusText = document.getElementById('ai-status-text');
+        const aiStatusIcon = document.getElementById('ai-status-icon');
+        const proctorWarningText = document.getElementById('proctor-warning-text');
+        const proctorWarningOverlay = document.getElementById('proctor-warning-overlay');
+        const setupStatusEl = document.getElementById('setup-status');
+
+
+        // --- API Helper ---
+        async function apiCall(endpoint, options = {}) {
+            try {
+                // ensure cookies/session are sent/received so Flask session persists
+                options.credentials = options.credentials || 'same-origin';
+                const response = await fetch(endpoint, options);
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.includes("application/json")) {
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.error || 'An API error occurred.');
+                    return data;
+                }
+                // Handle non-JSON responses gracefully
+                if (!response.ok) {
+                     const text = await response.text();
+                     console.error("Non-JSON error response:", text);
+                     throw new Error('A server error occurred. Check the console for details.');
+                }
+                return response; // For file blobs, etc.
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+                throw error;
+            }
+        }
+
+        // --- Proctoring Logic ---
+        function onResults(results) {
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+            
+            if (results.multiFaceLandmarks) {
+                if(results.multiFaceLandmarks.length > 1) {
+                    if (!proctoringState.multiFaceTimeout) {
+                        proctoringState.multiFaceTimeout = setTimeout(() => {
+                            proctorWarningText.textContent = "alert";
+                            proctorWarningOverlay.classList.add('visible');
+                            appState.proctoringFlags.push(`Q${appState.currentQuestionIndex + 1}: Multiple faces detected`);
+                        }, 1000);
+                    }
+                } else {
+                    clearTimeout(proctoringState.multiFaceTimeout); proctoringState.multiFaceTimeout = null;
+                    if(proctorWarningText.textContent === "alert") proctorWarningOverlay.classList.remove('visible');
+                }
+
+                if (results.multiFaceLandmarks.length > 0) {
+                    const landmarks = results.multiFaceLandmarks[0];
+                    let isMalpractice = false;
+                    const nose = landmarks[1];
+                    if (nose.x < 0.3 || nose.x > 0.7 || nose.y < 0.25 || nose.y > 0.75) isMalpractice = true;
+                    const fTop = landmarks[10], chin = landmarks[152], lCheek = landmarks[234], rCheek = landmarks[454];
+                    if(fTop && chin && lCheek && rCheek) {
+                        if ((Math.abs(chin.y - fTop.y) / Math.abs(rCheek.x - lCheek.x)) < 1.3) isMalpractice = true;
+                    }
+                    if (isMalpractice) {
+                        if (!proctoringState.focusTimeout) {
+                            proctoringState.focusTimeout = setTimeout(() => {
+                               if (proctorWarningText.textContent !== 'alert') {
+                                    proctorWarningText.textContent = "focus";
+                                    proctorWarningOverlay.classList.add('visible');
+                               }
+                               appState.proctoringFlags.push(`Q${appState.currentQuestionIndex + 1}: Lack of focus`);
+                            }, 1500);
+                        }
+                    } else {
+                        clearTimeout(proctoringState.focusTimeout); proctoringState.focusTimeout = null;
+                        if (proctorWarningText.textContent === "focus") proctorWarningOverlay.classList.remove('visible');
+                    }
+                }
+            }
+            canvasCtx.restore();
+        }
+        function startProctoring() {
+            return new Promise(async (resolve, reject) => {
+                document.getElementById('proctor-status-text').textContent = "Initializing Camera...";
+                document.getElementById('proctor-status-indicator').classList.replace('bg-gray-500', 'bg-yellow-500');
+                try {
+                    proctoringState.faceMesh = new FaceMesh({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`});
+                    proctoringState.faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+                    proctoringState.faceMesh.onResults(onResults);
+                    await proctoringState.faceMesh.initialize();
+                    // Robust getUserMedia: check existence and secure context
+                    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                        throw new Error('getUserMedia is not supported in this browser. Use a modern browser (Chrome/Edge/Firefox) and ensure camera/microphone APIs are available.');
+                    }
+                    // Some browsers require a secure context (HTTPS or localhost)
+                    if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+                        console.warn('Not in a secure context; getUserMedia may be blocked.');
+                    }
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                    videoElement.srcObject = stream;
+                    videoElement.onloadedmetadata = async () => {
+                        proctoringState.camera = new Camera(videoElement, { onFrame: async () => await proctoringState.faceMesh.send({image: videoElement}), width: 640, height: 480 });
+                        await proctoringState.camera.start();
+                        document.getElementById('proctor-status-indicator').classList.replace('bg-yellow-500', 'bg-green-500');
+                        document.getElementById('proctor-status-text').textContent = "Proctoring Active";
+                        resolve();
+                    };
+                } catch (err) { stopProctoring(); reject(err); }
+            });
+        }
+        function stopProctoring() {
+            clearTimeout(proctoringState.focusTimeout); clearTimeout(proctoringState.multiFaceTimeout);
+            if (proctoringState.camera) proctoringState.camera.stop();
+            if (videoElement.srcObject) videoElement.srcObject.getTracks().forEach(track => track.stop());
+            if (proctoringState.faceMesh) proctoringState.faceMesh.close();
+            document.getElementById('proctor-status-indicator').classList.replace('bg-green-500', 'bg-gray-500');
+            document.getElementById('proctor-status-text').textContent = "Proctoring Offline";
+        }
+
+        // --- Speech, Recording, and Timer Logic ---
+        let recognition;
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.onresult = (event) => {
+                let interim = '';
+                let final = appState.accumulatedTranscript;
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                     if (event.results[i].isFinal) {
+                        final += event.results[i][0].transcript.trim() + '. ';
+                    } else {
+                        interim += event.results[i][0].transcript;
+                    }
+                }
+                appState.accumulatedTranscript = final;
+                document.getElementById('answer-textarea').value = final + interim;
+            };
+        }
+
+        function speakText(text) {
+             return new Promise((resolve) => {
+                aiStatusText.textContent = "Speaking...";
+                aiStatusIcon.classList.remove('pulse');
+                if ('speechSynthesis' in window && text) {
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.onend = resolve;
+                    utterance.onerror = () => { console.error('Speech synthesis error'); resolve(); };
+                    let voices = window.speechSynthesis.getVoices();
+                    let selectedVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural')));
+                    if (!selectedVoice) selectedVoice = voices.find(v => v.lang.startsWith('en'));
+                    utterance.voice = selectedVoice;
+                    utterance.rate = 0.95;
+                    window.speechSynthesis.speak(utterance);
+                } else { resolve(); }
+            });
+        }
+
+        function startTimer() {
+            const timerDisplay = document.getElementById('timer-display');
+            let timeLeft = 120;
+            timerDisplay.textContent = "02:00";
+            timerDisplay.classList.remove('text-red-500');
+            appState.answerTimerInterval = setInterval(() => {
+                timeLeft--;
+                const minutes = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+                const seconds = (timeLeft % 60).toString().padStart(2, '0');
+                timerDisplay.textContent = `${minutes}:${seconds}`;
+                if (timeLeft <= 10) timerDisplay.classList.add('text-red-500');
+                if (timeLeft <= 0) stopRecording();
+            }, 1000);
+        }
+
+        function startRecording() {
+            if (recognition && !appState.isRecording) {
+                appState.isRecording = true;
+                aiStatusText.textContent = "Listening...";
+                aiStatusIcon.classList.add('pulse');
+                recordBtn.textContent = "Finish Answering";
+                recordBtn.classList.replace('bg-indigo-600', 'bg-red-600');
+                document.getElementById('answer-textarea').value = "";
+                appState.accumulatedTranscript = "";
+                recognition.start();
+                startTimer();
+            }
+        }
+
+        function stopRecording() {
+            if (appState.isRecording) {
+                appState.isRecording = false;
+                clearInterval(appState.answerTimerInterval);
+                aiStatusText.textContent = "Evaluating...";
+                aiStatusIcon.classList.remove('pulse');
+                recordBtn.textContent = "Start Answering";
+                recordBtn.classList.replace('bg-red-600', 'bg-indigo-600');
+                recordBtn.disabled = true;
+                if(recognition) recognition.stop();
+                submitForScoring();
+            }
+        }
+
+        // --- Core Interview Flow ---
+        async function runQuestionCycle() {
+            if (appState.currentQuestionIndex >= appState.questions.length) {
+                await generateFinalReport();
+                return;
+            }
+            aiStatusText.textContent = "Thinking...";
+            aiStatusIcon.classList.remove('pulse');
+            document.getElementById('question-text').textContent = "";
+            nextBtn.classList.add('hidden');
+            recordBtn.classList.remove('hidden');
+            recordBtn.disabled = true;
+            document.getElementById('answer-textarea').value = "";
+
+            const formalQuestion = appState.questions[appState.currentQuestionIndex];
+            const casualData = await apiCall('/api/make_casual', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question: formalQuestion })
+            });
+            
+            document.getElementById('question-text').textContent = casualData.casual_question || formalQuestion;
+            await speakText(casualData.casual_question || formalQuestion);
+            aiStatusText.textContent = "Ready to answer";
+            recordBtn.disabled = false;
+        }
+        
+        async function submitForScoring() {
+            const answer = document.getElementById('answer-textarea').value.trim();
+            const resultPayload = {
+                question: appState.questions[appState.currentQuestionIndex],
+                answer: answer || "No answer recorded.", score: 0, feedback: "No answer was recorded."
+            };
+             if(answer) {
+                try {
+                    const data = await apiCall('/api/score_answer', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ question: resultPayload.question, answer: answer })
+                    });
+                    resultPayload.score = data.score;
+                    resultPayload.feedback = data.feedback;
+                    aiStatusText.textContent = `Score: ${data.score}/10`;
+                } catch(error) {
+                    resultPayload.feedback = "Scoring failed.";
+                    aiStatusText.textContent = "Scoring Error";
+                }
+            } else {
+                 aiStatusText.textContent = "No answer detected.";
+            }
+            appState.interviewResults.push(resultPayload);
+            recordBtn.classList.add('hidden');
+            nextBtn.classList.remove('hidden');
+            nextBtn.disabled = false;
+        };
+
+        async function generateFinalReport() {
+            stopProctoring();
+            interviewView.classList.add('hidden');
+            endView.classList.remove('hidden');
+            
+            await apiCall('/api/generate_final_report', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    application_id: APPLICATION_ID,
+                    interview_results: appState.interviewResults,
+                    proctoring_flags: appState.proctoringFlags
+                })
+            });
+        }
+        
+        // --- Initialization ---
+        startBtn.onclick = async () => {
+            setupStatusEl.textContent = 'Please wait, starting camera...';
+            startBtn.disabled = true;
+            try {
+                await startProctoring();
+                const data = await apiCall('/api/start_interview', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ application_id: APPLICATION_ID })
+                });
+                if (!data.questions) throw new Error("Could not retrieve interview questions.");
+                appState.questions = data.questions;
+                setupView.classList.add('hidden');
+                interviewView.classList.remove('hidden');
+                runQuestionCycle();
+            } catch (err) {
+                setupStatusEl.textContent = `Error: ${err.message}. Please check permissions and retry.`;
+                // show retry banner
+                document.getElementById('camera-error-text').textContent = `Error: ${err.message}. Please allow camera/microphone and press Retry.`;
+                document.getElementById('camera-error-banner').classList.remove('hidden');
+                startBtn.disabled = false;
+            }
+        };
+
+        // Retry camera button logic
+        document.getElementById('retry-camera-btn').onclick = async () => {
+            document.getElementById('camera-error-banner').classList.add('hidden');
+            setupStatusEl.textContent = 'Retrying camera...';
+            try { await startProctoring(); setupStatusEl.textContent = 'Camera reconnected. Click Start to continue.'; } catch (e) { setupStatusEl.textContent = `Retry failed: ${e.message}`; document.getElementById('camera-error-banner').classList.remove('hidden'); }
+        };
+        document.getElementById('help-camera-btn').onclick = () => { alert('Check browser address bar permissions for Camera/Microphone and allow them. Also try a private window or disabling extensions.'); };
+
+        recordBtn.onclick = () => {
+             if (!appState.isRecording) startRecording();
+             else stopRecording();
+        };
+
+        nextBtn.onclick = () => {
+            appState.currentQuestionIndex++;
+            runQuestionCycle();
+        };
+
+        // Pre-load voices to prevent delay on first speech
+        window.speechSynthesis.getVoices();
+
+        // --- Tab-switch detection (efficient, debounced) with debug logging & blur fallback ---
+        (function(){
+            let clientDebounce = 0; // ms
+            const DEBOUNCE_MS = 800; // ignore repeated visibility events within this window
+            async function reportTabSwitch(source) {
+                const now = Date.now();
+                if (now - clientDebounce < DEBOUNCE_MS) {
+                    console.debug('Tab-switch ignored by debounce (source)', source);
+                    return; // ignore
+                }
+                clientDebounce = now;
+                console.debug('Reporting tab-switch (source)', source, 'time', new Date().toISOString());
+                try {
+                    const res = await fetch('/api/proctor/tab_switch', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' } });
+                    const data = await res.json();
+                    console.debug('Proctor response', data);
+                        if (data && data.terminated) {
+                        proctorWarningText.textContent = 'You have been terminated for repeated tab switching.';
+                        proctorWarningOverlay.classList.remove('warn-1','warn-2');
+                        proctorWarningOverlay.classList.add('terminated');
+                        proctorWarningOverlay.classList.add('visible');
+                        stopProctoring();
+                        recordBtn.disabled = true; nextBtn.disabled = true; startBtn.disabled = true;
+                        interviewView.classList.add('hidden'); endView.classList.remove('hidden');
+                    } else if (data && !data.terminated) {
+                        const cnt = Number(data.count || 0);
+                        appState.proctoringFlags.push(`Tab switch recorded (count=${cnt})`);
+                        // Escalate UI: first is gentle, second is stronger
+                        proctorWarningOverlay.classList.remove('warn-1','warn-2','terminated');
+                        if (cnt === 1) {
+                            proctorWarningText.textContent = 'Warning: Please avoid switching tabs. Continued switching may lead to termination.';
+                            proctorWarningOverlay.classList.add('warn-1');
+                            proctorWarningOverlay.classList.add('visible');
+                            setTimeout(()=>{ if (proctorWarningOverlay.classList.contains('warn-1')) proctorWarningOverlay.classList.remove('visible'); }, 3000);
+                        } else if (cnt === 2) {
+                            proctorWarningText.textContent = 'Final Warning: One more tab switch will terminate the interview.';
+                            proctorWarningOverlay.classList.add('warn-2');
+                            proctorWarningOverlay.classList.add('visible');
+                            setTimeout(()=>{ if (proctorWarningOverlay.classList.contains('warn-2')) proctorWarningOverlay.classList.remove('visible'); }, 4000);
+                        } else {
+                            proctorWarningText.textContent = `Tab switch detected (${cnt}). Avoid switching tabs.`;
+                            proctorWarningOverlay.classList.add('visible');
+                            setTimeout(()=>{ if (proctorWarningText.textContent.startsWith('Tab switch')) proctorWarningOverlay.classList.remove('visible'); }, 2500);
+                        }
+                    }
+                } catch (err) {
+                    console.error('Tab switch reporting failed', err);
+                }
+            }
+
+            function handleVisibilityChange() { if (document.visibilityState === 'hidden') reportTabSwitch('visibilitychange'); }
+            function handleBlur() { reportTabSwitch('blur'); }
+
+            document.addEventListener('visibilitychange', handleVisibilityChange, false);
+            // fallback: some browsers may not fire visibilitychange reliably in all cases
+            window.addEventListener('blur', handleBlur, false);
+        })();
+    </script>
+</body>
+</html>
+
