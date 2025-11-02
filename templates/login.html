@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login - AI Interview Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Inter', sans-serif;
+      background-color: #030712; 
+      background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px), 
+                        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 2rem 2rem;
+    }
+    .form-wrapper {
+      position: relative;
+      min-height: 470px;
+    }
+    .form-container {
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      position: absolute;
+      width: 100%;
+    }
+    .hidden-form {
+      opacity: 0;
+      transform: scale(0.98);
+      pointer-events: none;
+    }
+    .visible-form {
+      opacity: 1;
+      transform: scale(1);
+    }
+    .toggle-bg {
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+  </style>
+</head>
+<body class="text-gray-200">
+  <div class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md">
+      <!-- Logo + Title -->
+      <div class="text-center mb-6">
+        <svg class="mx-auto h-12 w-auto text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none"
+          viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-1.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25A2.25 2.25 0 015.25 3h13.5A2.25 2.25 0 0121 5.25zm-6-2.25h.008v.008H15V3z" />
+        </svg>
+        <h1 class="text-3xl font-bold text-white mt-2">AI Interview Platform</h1>
+      </div>
+
+      <!-- Auth Box -->
+      <div class="bg-gray-900/60 backdrop-blur-sm border border-gray-700 p-8 rounded-2xl shadow-2xl">
+        <!-- Toggle -->
+        <div class="mb-6 relative w-full bg-gray-800 rounded-full p-1 flex">
+          <div id="toggle-bg"
+            class="toggle-bg absolute top-1 left-1 h-8 w-1/2 bg-indigo-600 rounded-full"></div>
+          <button id="admin-toggle-btn"
+            class="relative z-10 w-1/2 py-1.5 text-sm font-bold text-white transition">Admin / Company</button>
+          <button id="candidate-toggle-btn"
+            class="relative z-10 w-1/2 py-1.5 text-sm font-bold text-gray-400 transition">Candidate</button>
+        </div>
+
+        <!-- Forms -->
+        <div class="form-wrapper">
+          <!-- Admin Login -->
+          <div id="admin-login-form" class="form-container visible-form">
+            <form class="space-y-5">
+              <h2 class="text-2xl font-bold text-center text-white">Admin Login</h2>
+              <input type="email" name="email" placeholder="Company Email" required
+                class="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition" />
+              <input type="password" name="password" placeholder="Password" required
+                class="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition" />
+              <button type="submit"
+                class="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 transform hover:scale-105 transition">
+                Login
+              </button>
+              <p class="text-center text-sm text-gray-400">
+                New Company? 
+                <button type="button" class="form-toggle-link font-medium text-indigo-400 hover:underline">Sign up here</button>
+              </p>
+            </form>
+          </div>
+
+          <!-- Admin Register -->
+          <div id="admin-register-form" class="form-container hidden-form">
+            <form class="space-y-4">
+              <h2 class="text-2xl font-bold text-center text-white">Admin Registration</h2>
+              <input type="text" name="company_name" placeholder="Company Name" required
+                class="w-full bg-gray-800 border border-gray-600 rounded-lg p-3" />
+              <input type="email" name="email" placeholder="Email Address" required
+                class="w-full bg-gray-800 border border-gray-600 rounded-lg p-3" />
+              <input type="tel" name="phone" placeholder="Phone Number" required
+                class="w-full bg-gray-800 border border-gray-600 rounded-lg p-3" />
+              <input type="password" name="password" placeholder="Password" required
+                class="w-full bg-gray-800 border border-gray-600 rounded-lg p-3" />
+              <button type="submit"
+                class="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 transform hover:scale-105 transition">
+                Register
+              </button>
+              <p class="text-center text-sm text-gray-400">
+                Have an account? 
+                <button type="button" class="form-toggle-link font-medium text-indigo-400 hover:underline">Log in</button>
+              </p>
+            </form>
+          </div>
+
+          <!-- Candidate Login -->
+          <div id="candidate-login-form" class="form-container hidden-form">
+            <form class="space-y-5">
+              <h2 class="text-2xl font-bold text-center text-white">Candidate Login</h2>
+              <input type="email" name="email" placeholder="Your Email" required
+                class="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition" />
+              <input type="password" name="password" placeholder="Password" required
+                class="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition" />
+              <button type="submit"
+                class="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 transform hover:scale-105 transition">
+                Login
+              </button>
+              <p class="text-center text-sm text-gray-400">
+                First time here? 
+                <button type="button" class="form-toggle-link font-medium text-indigo-400 hover:underline">Sign up</button>
+              </p>
+            </form>
+          </div>
+
+          <!-- Candidate Register -->
+          <div id="candidate-register-form" class="form-container hidden-form">
+            <form class="space-y-4">
+              <h2 class="text-2xl font-bold text-center text-white">Candidate Registration</h2>
+              <input type="text" name="name" placeholder="Full Name" required
+                class="w-full bg-gray-800 border border-gray-600 rounded-lg p-3" />
+              <input type="email" name="email" placeholder="Email Address" required
+                class="w-full bg-gray-800 border border-gray-600 rounded-lg p-3" />
+              <input type="password" name="password" placeholder="Password" required
+                class="w-full bg-gray-800 border border-gray-600 rounded-lg p-3" />
+              <button type="submit"
+                class="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 transform hover:scale-105 transition">
+                Register
+              </button>
+              <p class="text-center text-sm text-gray-400">
+                Already registered? 
+                <button type="button" class="form-toggle-link font-medium text-indigo-400 hover:underline">Log in</button>
+              </p>
+            </form>
+          </div>
+        </div>
+
+        <p id="auth-error" class="text-red-400 text-center mt-4 h-5"></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const adminToggleBtn = document.getElementById('admin-toggle-btn');
+      const candidateToggleBtn = document.getElementById('candidate-toggle-btn');
+      const toggleBg = document.getElementById('toggle-bg');
+      const authErrorEl = document.getElementById('auth-error');
+
+      const forms = {
+        admin: { login: document.getElementById('admin-login-form'), register: document.getElementById('admin-register-form') },
+        candidate: { login: document.getElementById('candidate-login-form'), register: document.getElementById('candidate-register-form') }
+      };
+
+      let activeUserType = 'admin';
+      let activeFormType = 'login';
+
+      function updateVisibleForm() {
+        Object.values(forms).forEach(userTypeForms => {
+          Object.values(userTypeForms).forEach(form => form.classList.replace('visible-form', 'hidden-form'));
+        });
+        forms[activeUserType][activeFormType].classList.replace('hidden-form', 'visible-form');
+        authErrorEl.textContent = '';
+      }
+
+      adminToggleBtn.addEventListener('click', () => {
+        if (activeUserType === 'candidate') {
+          activeUserType = 'admin';
+          activeFormType = 'login';
+          toggleBg.style.transform = 'translateX(0%)';
+          adminToggleBtn.classList.replace('text-gray-400', 'text-white');
+          candidateToggleBtn.classList.replace('text-white', 'text-gray-400');
+          updateVisibleForm();
+        }
+      });
+
+      candidateToggleBtn.addEventListener('click', () => {
+        if (activeUserType === 'admin') {
+          activeUserType = 'candidate';
+          activeFormType = 'login';
+          toggleBg.style.transform = 'translateX(100%)';
+          candidateToggleBtn.classList.replace('text-gray-400', 'text-white');
+          adminToggleBtn.classList.replace('text-white', 'text-gray-400');
+          updateVisibleForm();
+        }
+      });
+
+      document.querySelectorAll('.form-toggle-link').forEach(link => {
+        link.addEventListener('click', () => {
+          activeFormType = (activeFormType === 'login') ? 'register' : 'login';
+          updateVisibleForm();
+        });
+      });
+
+      async function handleFormSubmit(e, endpoint, redirectUrl) {
+        e.preventDefault();
+        const submitButton = e.target.querySelector('button[type="submit"]');
+        const originalButtonText = submitButton.textContent;
+        submitButton.textContent = 'Processing...';
+        submitButton.disabled = true;
+        authErrorEl.textContent = '';
+
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData.entries());
+
+        try {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error);
+
+          if (redirectUrl) {
+            window.location.href = redirectUrl;
+          } else {
+            alert(result.message);
+            activeFormType = 'login';
+            updateVisibleForm();
+          }
+        } catch (error) {
+          authErrorEl.textContent = error.message;
+        } finally {
+          submitButton.textContent = originalButtonText;
+          submitButton.disabled = false;
+        }
+      }
+
+      forms.admin.login.querySelector('form').addEventListener('submit', (e) => handleFormSubmit(e, '/api/login/admin', '/dashboard'));
+      forms.admin.register.querySelector('form').addEventListener('submit', (e) => handleFormSubmit(e, '/api/register/admin'));
+      forms.candidate.login.querySelector('form').addEventListener('submit', (e) => handleFormSubmit(e, '/api/login/candidate', '/candidate/dashboard'));
+      forms.candidate.register.querySelector('form').addEventListener('submit', (e) => handleFormSubmit(e, '/api/register/candidate'));
+    });
+  </script>
+</body>
+</html>
